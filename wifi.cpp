@@ -1,8 +1,8 @@
 #include <ESP8266WiFi.h>
 #include <Arduino.h>
 
-const char *ssid = "Speedex III";
-const char *password = "karpinpyrsto";
+const char *ssid = "***";
+const char *password = "***";
 
 const char *str_status[]= {
   "WL_IDLE_STATUS",
