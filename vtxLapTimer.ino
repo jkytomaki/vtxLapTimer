@@ -9,6 +9,7 @@
 //#include <ESP8266WiFi.h>
 
 #define CS_PIN 0 //CS
+#define AVG_WINDOW 40
 
 //AH_MCP320x ADC_SPI(D8);
 
@@ -27,9 +28,17 @@ boolean armed[] = {false, false, false, false};
 double armedMaxRssi[] = {0, 0, 0, 0};
 long armedMaxMs[] = {0, 0, 0, 0};
 
-const int MIN_RSSI[] = {379, 372, 379, 335};
+// for logging
+int rawRssi[] = {0, 0, 0, 0};
+double normalizedRawRssi[] = {0.0, 0.0, 0.0, 0.0};
+double averageRssi[] = {0.0, 0.0, 0.0, 0.0};
+
+int lowRssi[] = {2000, 2000, 2000, 2000};
+int hiRssi[] = {0, 0, 0, 0};
+
+const int MIN_RSSI[] = {422, 379, 460, 481};
 const int MAX_RSSI[] = {918, 912, 833, 734};
-RunningAverage averages[] = {RunningAverage(10), RunningAverage(10), RunningAverage(10), RunningAverage(10)};
+RunningAverage averages[] = {RunningAverage(AVG_WINDOW), RunningAverage(AVG_WINDOW), RunningAverage(AVG_WINDOW), RunningAverage(AVG_WINDOW)};
 
 // WIFI testing
 // declare telnet server (do NOT put in setup())
@@ -99,7 +108,15 @@ long armedMaxMs[] = {0, 0, 0, 0};
 
  */
 void handleChannel(int channel){
-  readvalue = read_adc(channel);
+  readvalue = read_adc(3-channel);
+  rawRssi[channel] = readvalue;
+
+  if (readvalue < lowRssi[channel]){
+    lowRssi[channel] = readvalue;
+  }
+  if (readvalue > hiRssi[channel]){
+    hiRssi[channel] = readvalue;
+  }
   
   Serial.print("#channel: ");
   Serial.print(channel);
@@ -107,11 +124,17 @@ void handleChannel(int channel){
   Serial.println(readvalue);
   
   normalized = normalizeRssi(channel, readvalue);
+  normalizedRawRssi[channel] = normalized;
+  
   averages[channel].addValue(normalized);
 
+  
+  
   now = millis();
   
   double avg = averages[channel].getAverage();
+  averageRssi[channel] = avg;
+  
   if (!blockArming[channel] && !armed[channel] && avg >= ARM_THRESHOLD){
     if (now - armedMaxMs[channel] < MIN_LAP_INTERVAL_MS){
       Serial.print("#");
@@ -153,16 +176,6 @@ void handleChannel(int channel){
     blockArming[channel] = false;
   }
 
-  if (loopCount % 10 == 0){
-    Serial.print("#;");
-    Serial.print(millis());
-    Serial.print(";");
-    Serial.print(channel + 1);
-    Serial.print(";");
-    Serial.print(normalized, DEC);
-    Serial.print(";");
-    Serial.println(averages[channel].getAverage(), DEC);  
-  }
 }
 
 void loop() {
@@ -172,6 +185,44 @@ void loop() {
   handleChannel(2);
   handleChannel(3);
 
+  if (loopCount % 10 == 0){
+    Serial.print("#;");
+
+    Serial.print(millis());
+    Serial.print(";");
+    
+    for (int i = 0; i < 4; i++){
+     Serial.print(rawRssi[i]);
+     Serial.print(";"); 
+    }
+    Serial.print(";     ;");
+    for (int i = 0; i < 4; i++){
+      Serial.print(normalizedRawRssi[i]);
+      Serial.print(";"); 
+    }
+    Serial.print(";     ;");
+    for (int i = 0; i < 4; i++){
+      Serial.print(averageRssi[i]);
+      Serial.print(";"); 
+    }
+
+    Serial.println();
+  }
+
+  Serial.print("# hi: ");
+
+  for (int i = 0; i < 4; i++){
+    Serial.print(hiRssi[i]);
+    Serial.print(";"); 
+  }
+  Serial.print("# low: ");
+
+  for (int i = 0; i < 4; i++){
+    Serial.print(lowRssi[i]);
+    Serial.print(";"); 
+  }
+  Serial.println();
+    
   delay(5);
 }
 
