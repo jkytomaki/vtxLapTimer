@@ -33,11 +33,15 @@ int rawRssi[] = {0, 0, 0, 0};
 double normalizedRawRssi[] = {0.0, 0.0, 0.0, 0.0};
 double averageRssi[] = {0.0, 0.0, 0.0, 0.0};
 
+// Measured min and max RSSI values for the 4 channels. Set LOG_RSSI_MIN_MAX to true to log measured min/max values
+// and set these accordingly.
+#define LOG_RSSI_MIN_MAX false
+const int MIN_RSSI[] = {415, 425, 352, 419};
+const int MAX_RSSI[] = {1231, 1305, 1225, 1299};
+
 int lowRssi[] = {2000, 2000, 2000, 2000};
 int hiRssi[] = {0, 0, 0, 0};
-
-const int MIN_RSSI[] = {422, 379, 460, 481};
-const int MAX_RSSI[] = {918, 912, 833, 734};
+ 
 RunningAverage averages[] = {RunningAverage(AVG_WINDOW), RunningAverage(AVG_WINDOW), RunningAverage(AVG_WINDOW), RunningAverage(AVG_WINDOW)};
 
 // WIFI testing
@@ -117,11 +121,13 @@ void handleChannel(int channel){
   if (readvalue > hiRssi[channel]){
     hiRssi[channel] = readvalue;
   }
-  
+
+  /*
   Serial.print("#channel: ");
   Serial.print(channel);
   Serial.print(", raw value: ");
   Serial.println(readvalue);
+  */
   
   normalized = normalizeRssi(channel, readvalue);
   normalizedRawRssi[channel] = normalized;
@@ -189,7 +195,7 @@ void loop() {
     Serial.print("#;");
 
     Serial.print(millis());
-    Serial.print(";");
+    Serial.print(";     ;");
     
     for (int i = 0; i < 4; i++){
      Serial.print(rawRssi[i]);
@@ -207,23 +213,28 @@ void loop() {
     }
 
     Serial.println();
-  }
 
-  Serial.print("# hi: ");
 
-  for (int i = 0; i < 4; i++){
-    Serial.print(hiRssi[i]);
-    Serial.print(";"); 
-  }
-  Serial.print("# low: ");
-
-  for (int i = 0; i < 4; i++){
-    Serial.print(lowRssi[i]);
-    Serial.print(";"); 
-  }
-  Serial.println();
+    if (LOG_RSSI_MIN_MAX){
+      Serial.print("# hi: ");
+  
+      for (int i = 0; i < 4; i++){
+        Serial.print(hiRssi[i]);
+        Serial.print(";"); 
+      }
+      Serial.print("# low: ");
     
+      for (int i = 0; i < 4; i++){
+        Serial.print(lowRssi[i]);
+        Serial.print(";"); 
+      }
+      Serial.println();
+      
+    }
+    
+  }
   delay(5);
+  
 }
 
 
